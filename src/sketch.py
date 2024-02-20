@@ -1,6 +1,7 @@
-from os import environ
-# need java 17 for py5
-environ["JAVA_HOME"] = environ.get("TMP_JAVA_HOME")
+if __name__ == '__main__':
+    # need java 17 for py5
+    from os import environ
+    environ['JAVA_HOME'] = environ.get('TMP_JAVA17_HOME')
 
 import py5
 import numpy as np
