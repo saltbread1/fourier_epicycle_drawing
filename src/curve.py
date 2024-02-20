@@ -7,6 +7,22 @@ class Curve(metaclass=ABCMeta):
     def __init__(self, start, end):
         self.start = start
         self.end = end
+        self.is_close = False
+
+    def close(self):
+        self.is_close = True
+
+    def translate(self, c):
+        self.start += c
+        self.end += c
+
+    def scale(self, c):
+        self.start = self.complex_scale(self.start, c)
+        self.end = self.complex_scale(self.end, c)
+
+    @staticmethod
+    def complex_scale(x, c):
+        return complex(x.real * c.real, x.imag * c.imag)
 
     @abstractmethod
     def get_points(self, dl):
@@ -33,6 +49,16 @@ class CubicBezier(Curve):
         super().__init__(start, end)
         self.control1 = control1
         self.control2 = control2
+
+    def translate(self, c):
+        super().translate(c)
+        self.control1 += c
+        self.control2 += c
+
+    def scale(self, c):
+        super().scale(c)
+        self.control1 = self.complex_scale(self.control1, c)
+        self.control2 = self.complex_scale(self.control2, c)
 
     def get_points(self, dl):
         points = np.array([self.calc_bezier(t) for t in np.arange(0, 1, 0.01)])
