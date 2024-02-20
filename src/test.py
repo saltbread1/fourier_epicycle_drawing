@@ -12,7 +12,7 @@ def setup():
     py5.size(512, 512)
     py5.background(0xff000000)
 
-    curves = image_outline.get_image_outlines('sample.svg')
+    curves = image_outline.get_image_outline('sample.svg')
     py5.no_fill()
     py5.stroke(0xffffffff)
     for curve in curves:

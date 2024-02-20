@@ -7,10 +7,6 @@ class Curve(metaclass=ABCMeta):
     def __init__(self, start, end):
         self.start = start
         self.end = end
-        self.is_close = False
-
-    def close(self):
-        self.is_close = True
 
     def translate(self, c):
         self.start += c
