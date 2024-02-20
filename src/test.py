@@ -4,19 +4,21 @@ if __name__ == '__main__':
     environ['JAVA_HOME'] = environ.get('TMP_JAVA17_HOME')
 
 import py5
-import numpy as np
-import image_outline
+import outline
 
 
 def setup():
     py5.size(512, 512)
     py5.background(0xff000000)
 
-    curves = image_outline.get_image_outline('sample.svg')
+    curves = outline.svg2curves('sample.svg')
+    py5.push()
+    py5.translate(py5.width/2, py5.height/2)
     py5.no_fill()
     py5.stroke(0xffffffff)
     for curve in curves:
         curve.draw()
+    py5.pop()
 
 
 def draw():

@@ -4,7 +4,7 @@ import svg.path
 import curve
 
 
-def get_image_outline(filename):
+def svg2curves(filename):
     filepath = os.path.join(os.path.dirname(__file__), '..', 'resources', 'images', filename)
     tree = ET.parse(filepath)
     root = tree.getroot()
