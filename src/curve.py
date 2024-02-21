@@ -21,6 +21,10 @@ class Curve(metaclass=ABCMeta):
         return complex(x.real * c.real, x.imag * c.imag)
 
     @abstractmethod
+    def get_length(self):
+        pass
+
+    @abstractmethod
     def get_points(self, dl):
         pass
 
@@ -32,6 +36,9 @@ class Curve(metaclass=ABCMeta):
 class Line(Curve):
     def __init__(self, start, end):
         super().__init__(start, end)
+
+    def get_length(self):
+        return abs(self.start.real - self.end.real)
 
     def get_points(self, dl):
         return np.array([(1.-t)*self.start + t*self.end for t in np.arange(0, 1, dl/abs(self.end - self.start))])
@@ -56,20 +63,30 @@ class CubicBezier(Curve):
         self.control1 = self.complex_scale(self.control1, c)
         self.control2 = self.complex_scale(self.control2, c)
 
-    def get_points(self, dl):
-        points = np.array([self.calc_bezier(t) for t in np.arange(0, 1, 0.01)])
-        cache = 0.
-        ret = [points[0]]
-        for i in range(1, len(points)):
-            curr = points[i]
-            prev = points[i-1]
-            cache += abs(curr - prev)
-            if cache > dl:
-                ret.append(curr)
-                cache = 0.
-        return np.array(ret)
+    def get_length(self):
+        bezier_points = np.array([self.get_bezier_point(t) for t in np.arange(0, 1, 0.01)])
+        l = 0.
+        for i in range(1, len(bezier_points)):
+            curr = bezier_points[i]
+            prev = bezier_points[i-1]
+            l += abs(curr - prev)
+        return l
 
-    def calc_bezier(self, t):
+    def get_points(self, dl):
+        # bezier_points = np.array([self.get_bezier_point(t) for t in np.arange(0, 1, 0.01)])
+        # cache = 0.
+        # ret = [bezier_points[0]]
+        # for i in range(1, len(bezier_points)):
+        #     curr = bezier_points[i]
+        #     prev = bezier_points[i-1]
+        #     cache += abs(curr - prev)
+        #     if cache > dl:
+        #         ret.append(curr)
+        #         cache = 0.
+        # return np.array(ret)
+        return np.array([self.get_bezier_point(t) for t in np.arange(0, 1, dl / self.get_length())])
+
+    def get_bezier_point(self, t):
         term0 = (1.-t)*(1.-t)*(1.-t)*self.start
         term1 = 3.*t*(1.-t)*(1.-t)*self.control1
         term2 = 3.*t*t*(1.-t)*self.control2

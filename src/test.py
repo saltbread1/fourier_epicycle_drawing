@@ -17,9 +17,9 @@ def setup():
     py5.no_fill()
     py5.stroke(0xffffffff)
     for curve in curves:
-        curve.draw()
-        # for point in curve.get_points(6):
-        #     py5.point(point.real, point.imag)
+        # curve.draw()
+        for point in curve.get_points(6):
+            py5.point(point.real, point.imag)
     py5.pop()
 
 
