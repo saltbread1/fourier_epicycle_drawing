@@ -16,6 +16,11 @@ class Curve(metaclass=ABCMeta):
         self.start = self.complex_scale(self.start, c)
         self.end = self.complex_scale(self.end, c)
 
+    def reverse(self):
+        tmp = self.start
+        self.start = self.end
+        self.end = tmp
+
     @staticmethod
     def complex_scale(x, c):
         return complex(x.real * c.real, x.imag * c.imag)
@@ -67,6 +72,12 @@ class CubicBezier(Curve):
         super().scale(c)
         self.control1 = self.complex_scale(self.control1, c)
         self.control2 = self.complex_scale(self.control2, c)
+
+    def reverse(self):
+        super().reverse()
+        tmp = self.control1
+        self.control1 = self.control2
+        self.control2 = tmp
 
     def get_length(self):
         bezier_points = np.array([self.get_bezier_point(t) for t in np.arange(0, 1, 0.01)])

@@ -18,7 +18,7 @@ def setup():
 def draw():
     py5.background(0xff000000)
     renderer.draw_outline()
-    #renderer.update_and_draw()
+    renderer.update_and_draw()
 
 
 py5.run_sketch()
