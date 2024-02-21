@@ -32,13 +32,18 @@ class Curve(metaclass=ABCMeta):
     def draw(self):
         pass
 
+    def __eq__(self, other):
+        if not isinstance(other, Curve):
+            return False
+        return self.start == other.start and self.end == other.end
+
 
 class Line(Curve):
     def __init__(self, start, end):
         super().__init__(start, end)
 
     def get_length(self):
-        return abs(self.start.real - self.end.real)
+        return abs(self.start - self.end)
 
     def get_points(self, dl):
         return np.array([(1.-t)*self.start + t*self.end for t in np.arange(0, 1, dl/abs(self.end - self.start))])
