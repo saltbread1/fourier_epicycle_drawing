@@ -12,7 +12,7 @@ renderer = epicycle.Epicycle()
 def setup():
     py5.size(512, 512)
     py5.background(0xff000000)
-    renderer.initialize('sample.svg', 8)
+    renderer.initialize('sample.svg', 4)
 
 
 def draw():

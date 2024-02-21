@@ -67,8 +67,8 @@ class Epicycle:
         # create graph based on a curve set
         graph = nx.Graph()
         for curve in curves:
-            start = self.complex2string(curve.start)
-            end = self.complex2string(curve.end)
+            start = (curve.start.real, curve.start.imag)
+            end = (curve.end.real, curve.end.imag)
             graph.add_node(start)
             graph.add_node(end)
             graph.add_weighted_edges_from([(start, end, curve.get_length())])
@@ -77,16 +77,16 @@ class Epicycle:
         for component in nx.connected_components(graph):
             if len(list(nx.connected_components(graph))) == 1:
                 break
-            this_points = [self.string2complex(x) for x in component]
+            this_points = [complex(x[0], x[1]) for x in component]
             min_dist = np.inf
             min_points = None
             for this_point in this_points:
-                other_points = [self.string2complex(x) for x in graph if x not in component]
+                other_points = [complex(x[0], x[1]) for x in graph if x not in component]
                 tmp_dist, other_point = self.get_min_dist_point(this_point, other_points)
                 if tmp_dist < min_dist:
                     min_dist = tmp_dist
                     min_points = [this_point, other_point]
-            edge = [(self.complex2string(min_points[0]), self.complex2string(min_points[1]), min_dist)]
+            edge = [((min_points[0].real, min_points[0].imag), (min_points[1].real, min_points[1].imag), min_dist)]
             graph.add_weighted_edges_from(edge)
 
         # solve Chinese Postman Problem
@@ -107,8 +107,8 @@ class Epicycle:
         return ret
 
     def get_curve(self, curves, anchor):
-        start = self.string2complex(anchor[0])
-        end = self.string2complex(anchor[1])
+        start = complex(anchor[0][0], anchor[0][1])
+        end = complex(anchor[1][0], anchor[1][1])
         for curve in curves:
             if curve.start == start and curve.end == end:
                 return curve
@@ -116,15 +116,6 @@ class Epicycle:
                 curve.reverse()
                 return curve
         return Line(start, end)
-
-    @staticmethod
-    def complex2string(c):
-        return f'{c.real},{c.imag}'
-
-    @staticmethod
-    def string2complex(str):
-        x, y = str.split(',')
-        return complex(float(x), float(y))
 
     @staticmethod
     def get_min_dist_point(point, all_points):
@@ -165,8 +156,8 @@ class Epicycle:
         py5.stroke_weight(3)
         py5.stroke(0xff00ff00)
         for p in self.path:
-            start = self.string2complex(p[0])
-            end = self.string2complex(p[1])
+            start = complex(p[0][0], p[0][1])
+            end = complex(p[1][0], p[1][1])
             py5.point(start.real, start.imag)
             py5.point(end.real, end.imag)
         py5.pop()
