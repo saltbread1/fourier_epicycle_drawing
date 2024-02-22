@@ -16,19 +16,20 @@ class Epicycle:
         self.plots_dft = np.array([])
         self.num_plots = 0
         self.init_rad = 0.
+        self.graph = None
 
     def initialize(self, filename, plot_space):
         curves = self.create_curve(filename, 8)
         path = self.calc_drawing_path(curves)
-        self.curves = self.sort_curves(curves, path)
-        # self.curves = curves
-        self.path = path
-        print(len(curves), len(path), len(self.curves))
-        self.plots = np.array([point for curve in self.curves for point in curve.get_points(plot_space)])
-        print(len(self.plots))
-        self.plots_dft = np.fft.fft(self.plots)
-        self.num_plots = len(self.plots)
-        self.init_rad = 0.
+        # self.curves = self.sort_curves(curves, path)
+        self.curves = curves
+        # self.path = path
+        # print(len(curves), len(path), len(self.curves))
+        # self.plots = np.array([point for curve in self.curves for point in curve.get_points(plot_space)])
+        # print(len(self.plots))
+        # self.plots_dft = np.fft.fft(self.plots)
+        # self.num_plots = len(self.plots)
+        # self.init_rad = 0.
 
     def create_curve(self, filename, dist_thresh):
         curves = outline.svg2curves(filename)
@@ -71,11 +72,12 @@ class Epicycle:
             end = (curve.end.real, curve.end.imag)
             graph.add_node(start)
             graph.add_node(end)
-            graph.add_weighted_edges_from([(start, end, curve.get_length())])
+            graph.add_edge(start, end, weight=curve.get_length())
 
         # make it a single connected graph
-        for component in nx.connected_components(graph):
-            if len(list(nx.connected_components(graph))) == 1:
+        components = list(nx.connected_components(graph))
+        for component in components:
+            if len(components) == 1:
                 break
             this_points = [complex(x[0], x[1]) for x in component]
             min_dist = np.inf
@@ -86,14 +88,17 @@ class Epicycle:
                 if tmp_dist < min_dist:
                     min_dist = tmp_dist
                     min_points = [this_point, other_point]
-            edge = [((min_points[0].real, min_points[0].imag), (min_points[1].real, min_points[1].imag), min_dist)]
-            graph.add_weighted_edges_from(edge)
+            graph.add_edge((min_points[0].real, min_points[0].imag),
+                           (min_points[1].real, min_points[1].imag),
+                           weight=min_dist)
 
+        self.graph = graph
+        print(graph.edges)
         # solve Chinese Postman Problem
-        _, path = chinese_postman(graph)
+        _, path = chinese_postman(graph, 'weight')
         return path
 
-    def sort_curves(self, curves, path):
+    def get_curves_from_path(self, curves, path):
         # return [self.get_curve(curves, anchor) for anchor in path]
         ret = []
         tmp = 0
@@ -115,7 +120,7 @@ class Epicycle:
             elif curve.start == end and curve.end == start:
                 curve.reverse()
                 return curve
-        return Line(start, end)
+        return Line(start, end, 0xffff0000)
 
     @staticmethod
     def get_min_dist_point(point, all_points):
@@ -134,32 +139,34 @@ class Epicycle:
         py5.push()
         py5.translate(py5.width / 2, py5.height / 2)
         py5.no_fill()
-        # curves
-        py5.stroke(0xffffffff)
-        py5.stroke_weight(0.4)
-        for curve in self.curves:
-            curve.draw()
-        # start points
-        py5.stroke_weight(4)
-        py5.stroke(0xffff0000)
-        for curve in self.curves:
-            py5.point(curve.start.real, curve.start.imag)
-        # end points
-        py5.stroke_weight(2)
-        py5.stroke(0xff0000ff)
-        for curve in self.curves:
-            py5.point(curve.end.real, curve.end.imag)
-        # all plots
-        # for plot in self.plots:
-        #     py5.point(plot.real, plot.imag)
-        # anchors of path
-        py5.stroke_weight(3)
-        py5.stroke(0xff00ff00)
-        for p in self.path:
-            start = complex(p[0][0], p[0][1])
-            end = complex(p[1][0], p[1][1])
-            py5.point(start.real, start.imag)
-            py5.point(end.real, end.imag)
+        # # curves
+        # py5.stroke(0xffffffff)
+        # py5.stroke_weight(0.4)
+        # for curve in self.curves:
+        #     curve.draw()
+        # # start points
+        # py5.stroke_weight(4)
+        # py5.stroke(0xffff0000)
+        # for curve in self.curves:
+        #     py5.point(curve.start.real, curve.start.imag)
+        # # end points
+        # py5.stroke_weight(2)
+        # py5.stroke(0xff0000ff)
+        # for curve in self.curves:
+        #     py5.point(curve.end.real, curve.end.imag)
+        # # all plots
+        # # for plot in self.plots:
+        # #     py5.point(plot.real, plot.imag)
+        # # anchors of path
+        # py5.stroke_weight(3)
+        # py5.stroke(0xff00ff00)
+        # for p in self.path:
+        #     start = complex(p[0][0], p[0][1])
+        #     end = complex(p[1][0], p[1][1])
+        #     py5.point(start.real, start.imag)
+        #     py5.point(end.real, end.imag)
+        for curves in self.get_curves_from_path(self.curves, self.graph.edges()):
+            curves.draw()
         py5.pop()
 
     def update_and_draw(self):

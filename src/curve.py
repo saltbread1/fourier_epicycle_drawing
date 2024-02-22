@@ -4,9 +4,10 @@ import py5
 
 
 class Curve(metaclass=ABCMeta):
-    def __init__(self, start, end):
+    def __init__(self, start, end, color=0xffffffff):
         self.start = start
         self.end = end
+        self.color = color
 
     def translate(self, c):
         self.start += c
@@ -44,8 +45,8 @@ class Curve(metaclass=ABCMeta):
 
 
 class Line(Curve):
-    def __init__(self, start, end):
-        super().__init__(start, end)
+    def __init__(self, start, end, color=0xffffffff):
+        super().__init__(start, end, color)
 
     def get_length(self):
         return abs(self.start - self.end)
@@ -54,12 +55,13 @@ class Line(Curve):
         return np.array([(1.-t)*self.start + t*self.end for t in np.arange(0, 1, dl/abs(self.end - self.start))])
 
     def draw(self):
+        py5.stroke(self.color)
         py5.line(self.start.real, self.start.imag, self.end.real, self.end.imag)
 
 
 class CubicBezier(Curve):
-    def __init__(self, start, control1, control2, end):
-        super().__init__(start, end)
+    def __init__(self, start, control1, control2, end, color=0xffffffff):
+        super().__init__(start, end, color)
         self.control1 = control1
         self.control2 = control2
 
@@ -110,6 +112,7 @@ class CubicBezier(Curve):
         return term0 + term1 + term2 + term3
 
     def draw(self):
+        py5.stroke(self.color)
         py5.bezier(self.start.real, self.start.imag,
                    self.control1.real, self.control1.imag,
                    self.control2.real, self.control2.imag,
