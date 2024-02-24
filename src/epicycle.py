@@ -1,9 +1,7 @@
 import py5
 import numpy as np
 import math
-import cmath
 import networkx as nx
-from itertools import combinations
 from ortoolpy import chinese_postman
 import outline
 from curve import Line
@@ -16,47 +14,12 @@ class Epicycle:
         self.point_list = []
 
     def initialize(self, filename, plot_space):
-        curves = self.create_curve(filename, 8)
+        curves = outline.svg2curves(filename)
         path = self.calc_drawing_path(curves)
         curves = self.get_curves_from_path(curves, path)
-        print(len(curves), len(path), len(curves))
         plots = np.array([point for curve in curves for point in curve.get_points(plot_space)])
-        print(len(plots))
-        self.plots_dft = np.fft.fft(plots) / len(plots)
+        self.plots_dft = np.fft.fft(plots)
         self.init_rad = 0.
-
-    def create_curve(self, filename, dist_thresh):
-        curves = outline.svg2curves(filename)
-
-        # gather together nearby points
-        # for this_curve in curves:
-        #     # set of start and end
-        #     min_dists = [math.inf, math.inf]
-        #     other_points = [None, None]
-        #
-        #     for other_curve in curves:
-        #         if this_curve.__eq__(other_curve):
-        #             continue
-        #         for other_anchor in [other_curve.start, other_curve.end]:
-        #             tmp_dists = [abs(other_anchor - this_curve.start), abs(other_anchor - this_curve.end)]
-        #             # avoid curve.start = curve.end
-        #             if tmp_dists[0] < min_dists[0] and tmp_dists[1] > dist_thresh:
-        #                 min_dists[0] = tmp_dists[0]
-        #                 other_points[0] = other_anchor
-        #             if tmp_dists[1] < min_dists[1] and tmp_dists[0] > dist_thresh:
-        #                 min_dists[1] = tmp_dists[1]
-        #                 other_points[1] = other_anchor
-        #     if min_dists[0] < dist_thresh:
-        #         this_curve.start = other_points[0]
-        #     if min_dists[1] < dist_thresh:
-        #         this_curve.end = other_points[1]
-        #
-        # for this_curve in curves:
-        #     if this_curve.start == this_curve.end:
-        #         curves.remove(this_curve)
-        #         print(1)
-
-        return curves
 
     def calc_drawing_path(self, curves):
         # create graph based on a curve set
@@ -132,24 +95,22 @@ class Epicycle:
             py5.pop()
             return
 
-        x = 0.
-        y = 0.
+        c = 0.
         py5.stroke(0xff0000ff)
         py5.no_fill()
         num_plots = len(self.plots_dft)
         for i in range(num_plots):
-            f = self.plots_dft[i].item()
+            f = self.plots_dft[i].item() / len(self.plots_dft)
             r = abs(f)
-            rad = cmath.phase(f)
-            py5.ellipse(x, y, 2. * r, 2. * r)
+            py5.ellipse(c.real, c.imag, 2. * r, 2. * r)
 
-            x += r * math.cos(i * self.init_rad + rad)
-            y += r * math.sin(i * self.init_rad + rad)
+            rad = self.init_rad * i
+            c += f * complex(math.cos(rad), math.sin(rad))
 
-        self.point_list.append(complex(x, y))
+        self.point_list.append(c)
         self.init_rad += math.tau / num_plots
 
         py5.no_stroke()
         py5.fill(0xffff0000)
-        py5.ellipse(x, y, 8, 8)
+        py5.ellipse(c.real, c.imag, 8, 8)
         py5.pop()

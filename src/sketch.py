@@ -18,7 +18,9 @@ def setup():
 
 def draw():
     py5.background(0xff000000)
-    renderer.update_and_draw()
+    for i in range(4):
+        py5.background(0xff000000)
+        renderer.update_and_draw()
 
 
 py5.run_sketch()
