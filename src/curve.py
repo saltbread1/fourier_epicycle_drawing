@@ -17,10 +17,17 @@ class Curve(metaclass=ABCMeta):
         self.start = self.complex_scale(self.start, c)
         self.end = self.complex_scale(self.end, c)
 
-    def reverse(self):
-        tmp = self.start
-        self.start = self.end
-        self.end = tmp
+    @abstractmethod
+    def copy(self):
+        pass
+
+    def reverse(self, target=None):
+        if target is None:
+            target = self.copy()
+        tmp = target.start
+        target.start = target.end
+        target.end = tmp
+        return target
 
     @staticmethod
     def complex_scale(x, c):
@@ -48,10 +55,15 @@ class Line(Curve):
     def __init__(self, start, end, color=0xffffffff):
         super().__init__(start, end, color)
 
+    def copy(self):
+        return Line(self.start, self.end, self.color)
+
     def get_length(self):
         return abs(self.start - self.end)
 
     def get_points(self, dl):
+        if self.start == self.end:
+            return np.array([])
         return np.array([(1.-t)*self.start + t*self.end for t in np.arange(0, 1, dl/abs(self.end - self.start))])
 
     def draw(self):
@@ -75,11 +87,15 @@ class CubicBezier(Curve):
         self.control1 = self.complex_scale(self.control1, c)
         self.control2 = self.complex_scale(self.control2, c)
 
-    def reverse(self):
-        super().reverse()
-        tmp = self.control1
-        self.control1 = self.control2
-        self.control2 = tmp
+    def copy(self):
+        return CubicBezier(self.start, self.control1, self.control2, self.end, self.color)
+
+    def reverse(self, target=None):
+        target = super().reverse()
+        tmp = target.control1
+        target.control1 = target.control2
+        target.control2 = tmp
+        return target
 
     def get_length(self):
         bezier_points = np.array([self.get_bezier_point(t) for t in np.arange(0, 1, 0.01)])

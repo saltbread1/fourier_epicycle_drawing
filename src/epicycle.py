@@ -3,9 +3,9 @@ import numpy as np
 import math
 import cmath
 import networkx as nx
-from ortoolpy import chinese_postman
+from itertools import combinations
 import outline
-from curve import Line, CubicBezier
+from curve import Line
 
 
 class Epicycle:
@@ -21,15 +21,15 @@ class Epicycle:
     def initialize(self, filename, plot_space):
         curves = self.create_curve(filename, 8)
         path = self.calc_drawing_path(curves)
-        # self.curves = self.sort_curves(curves, path)
-        self.curves = curves
-        # self.path = path
-        # print(len(curves), len(path), len(self.curves))
-        # self.plots = np.array([point for curve in self.curves for point in curve.get_points(plot_space)])
-        # print(len(self.plots))
-        # self.plots_dft = np.fft.fft(self.plots)
-        # self.num_plots = len(self.plots)
-        # self.init_rad = 0.
+        self.curves = self.get_curves_from_path(curves, path)
+        # self.curves = curves
+        self.path = path
+        print(len(curves), len(path), len(self.curves))
+        self.plots = np.array([point for curve in self.curves for point in curve.get_points(plot_space)])
+        print(len(self.plots))
+        self.plots_dft = np.fft.fft(self.plots)
+        self.num_plots = len(self.plots)
+        self.init_rad = 0.
 
     def create_curve(self, filename, dist_thresh):
         curves = outline.svg2curves(filename)
@@ -37,7 +37,7 @@ class Epicycle:
         # gather together nearby points
         # for this_curve in curves:
         #     # set of start and end
-        #     min_dists = [np.inf, np.inf]
+        #     min_dists = [math.inf, math.inf]
         #     other_points = [None, None]
         #
         #     for other_curve in curves:
@@ -66,65 +66,69 @@ class Epicycle:
 
     def calc_drawing_path(self, curves):
         # create graph based on a curve set
-        graph = nx.Graph()
+        # this is probably disconnected graph
+        g = nx.MultiGraph()
         for curve in curves:
             start = (curve.start.real, curve.start.imag)
             end = (curve.end.real, curve.end.imag)
-            graph.add_node(start)
-            graph.add_node(end)
-            graph.add_edge(start, end, weight=curve.get_length())
+            g.add_node(start)
+            g.add_node(end)
+            g.add_edge(start, end, weight=curve.get_length())
 
         # make it a single connected graph
-        components = list(nx.connected_components(graph))
-        for component in components:
+        while True:
+            components = list(nx.connected_components(g))
             if len(components) == 1:
                 break
+            component = components[0]
             this_points = [complex(x[0], x[1]) for x in component]
-            min_dist = np.inf
+            min_dist = math.inf
             min_points = None
             for this_point in this_points:
-                other_points = [complex(x[0], x[1]) for x in graph if x not in component]
+                other_points = [complex(x[0], x[1]) for x in g if x not in component]
                 tmp_dist, other_point = self.get_min_dist_point(this_point, other_points)
                 if tmp_dist < min_dist:
                     min_dist = tmp_dist
                     min_points = [this_point, other_point]
-            graph.add_edge((min_points[0].real, min_points[0].imag),
-                           (min_points[1].real, min_points[1].imag),
-                           weight=min_dist)
+            g.add_edge((min_points[0].real, min_points[0].imag),
+                       (min_points[1].real, min_points[1].imag),
+                       weight=min_dist)
 
-        self.graph = graph
-        print(graph.edges)
+        # construct Eulerian graph
+        odd_degree_nodes = [nd for nd, dg in g.degree() if dg % 2 == 1]
+        dd = nx.floyd_warshall(g)
+        mx = max(d for dc in dd.values() for d in dc.values())
+        h = nx.Graph()
+        for i, j in combinations(odd_degree_nodes, 2):
+            h.add_edge(i, j, weight=mx - dd[i][j])
+        for i, j in nx.max_weight_matching(h, True):
+            path = nx.shortest_path(g, i, j, 'weight')
+            for k in range(len(path) - 1):
+                u, v = path[k], path[k+1]
+                w = max([d.get('weight', 1) for d in g[u][v].values()])
+                g.add_edge(u, v, weight=mx + w)
+
+        self.graph = g
         # solve Chinese Postman Problem
-        _, path = chinese_postman(graph, 'weight')
-        return path
+        ret = nx.eulerian_circuit(g)
+        return list(ret)
 
     def get_curves_from_path(self, curves, path):
-        # return [self.get_curve(curves, anchor) for anchor in path]
-        ret = []
-        tmp = 0
-        for anchor in path:
-            curve = self.get_curve(curves, anchor)
-            if curve is not None:
-                ret.append(curve)
-            else:
-                tmp += 1
-        print(tmp)
-        return ret
+        return [self.get_curve(curves, anchor) for anchor in path]
 
     def get_curve(self, curves, anchor):
         start = complex(anchor[0][0], anchor[0][1])
         end = complex(anchor[1][0], anchor[1][1])
         for curve in curves:
             if curve.start == start and curve.end == end:
-                return curve
+                return curve.copy()
             elif curve.start == end and curve.end == start:
-                curve.reverse()
-                return curve
+                return curve.reverse()
         return Line(start, end, 0xffff0000)
 
     @staticmethod
     def get_min_dist_point(point, all_points):
-        min_dist = np.inf
+        min_dist = math.inf
         other_point = None
         for other in all_points:
             if other == point:
@@ -139,34 +143,32 @@ class Epicycle:
         py5.push()
         py5.translate(py5.width / 2, py5.height / 2)
         py5.no_fill()
-        # # curves
-        # py5.stroke(0xffffffff)
-        # py5.stroke_weight(0.4)
-        # for curve in self.curves:
-        #     curve.draw()
-        # # start points
-        # py5.stroke_weight(4)
-        # py5.stroke(0xffff0000)
-        # for curve in self.curves:
-        #     py5.point(curve.start.real, curve.start.imag)
-        # # end points
-        # py5.stroke_weight(2)
-        # py5.stroke(0xff0000ff)
-        # for curve in self.curves:
-        #     py5.point(curve.end.real, curve.end.imag)
-        # # all plots
-        # # for plot in self.plots:
-        # #     py5.point(plot.real, plot.imag)
-        # # anchors of path
-        # py5.stroke_weight(3)
-        # py5.stroke(0xff00ff00)
-        # for p in self.path:
-        #     start = complex(p[0][0], p[0][1])
-        #     end = complex(p[1][0], p[1][1])
-        #     py5.point(start.real, start.imag)
-        #     py5.point(end.real, end.imag)
-        for curves in self.get_curves_from_path(self.curves, self.graph.edges()):
-            curves.draw()
+        # curves
+        for curve in self.curves:
+            curve.draw()
+        # start points
+        py5.stroke_weight(4)
+        py5.stroke(0xffff0000)
+        for curve in self.curves:
+            py5.point(curve.start.real, curve.start.imag)
+        # end points
+        py5.stroke_weight(2)
+        py5.stroke(0xff0000ff)
+        for curve in self.curves:
+            py5.point(curve.end.real, curve.end.imag)
+        # all plots
+        # for plot in self.plots:
+        #     py5.point(plot.real, plot.imag)
+        # anchors of path
+        py5.stroke_weight(3)
+        py5.stroke(0xff00ff00)
+        for p in self.path:
+            start = complex(p[0][0], p[0][1])
+            end = complex(p[1][0], p[1][1])
+            py5.point(start.real, start.imag)
+            py5.point(end.real, end.imag)
+        # for curves in self.get_curves_from_path(self.curves, self.graph.edges()):
+        #     curves.draw()
         py5.pop()
 
     def update_and_draw(self):
@@ -192,4 +194,3 @@ class Epicycle:
         py5.fill(0xffff0000)
         py5.ellipse(x, y, 8, 8)
         py5.pop()
-
