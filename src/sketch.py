@@ -20,7 +20,7 @@ def draw():
     py5.background(0xff000000)
     for i in range(4):
         py5.background(0xff000000)
-        renderer.update_and_draw(400, 0.002)
+        renderer.update_and_draw(256, 0.002)
 
 
 py5.run_sketch()

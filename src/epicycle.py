@@ -10,27 +10,26 @@ from curve import Line
 
 class Epicycle:
     def __init__(self):
-        self.max_smp = 0.
-        self.plots_dft = [np.array([]), np.array([])]
-        self.init_rad = 0.
-        self.point_list = []
         self.circle_center = 0
         self.image_center = 0
-        self.curves = []
+        self.max_smp = 0.
+        self.plots_dft_x = np.array([])
+        self.plots_dft_y = np.array([])
+        self.init_rad = 0.
+        self.point_list = []
 
     def initialize(self, filename, smp_dist_interval, circle_center=0, image_center=0):
         self.circle_center = circle_center
         self.image_center = image_center
 
         curves = outline.svg2curves(filename, image_center - circle_center)
-        self.curves = curves
         path = self.calc_drawing_path(curves)
-        curves = self.get_curves_from_path(curves, path)
-        plots = np.array([point for curve in curves for point in curve.get_points(smp_dist_interval)])
+        curves = [self.get_curve_from_anchor(curves, anchor) for anchor in path]
+        plots = [point for curve in curves for point in curve.get_points(smp_dist_interval)]
         self.max_smp = len(plots)
         print(self.max_smp)
-        self.plots_dft[0] = np.fft.fft([p.real for p in plots])
-        self.plots_dft[1] = np.fft.fft([p.imag for p in plots])
+        self.plots_dft_x = np.fft.fft([p.real for p in plots])
+        self.plots_dft_y = np.fft.fft([p.imag for p in plots])
         self.init_rad = 0.
         self.point_list = []
 
@@ -65,13 +64,20 @@ class Epicycle:
                        weight=min_dist)
 
         # solve Chinese Postman Problem
-        _, ret = chinese_postman(g)
-        return list(ret)
+        cache_g = nx.MultiGraph(g)
+        _, one_stroke_path = chinese_postman(g)
+        # ret = []
+        # for edge in one_stroke_path:
+        #     if edge[1] in nx.neighbors(cache_g, edge[0]):
+        #         ret.append(edge)
+        #         continue
+        #     nodes = nx.shortest_path(cache_g, edge[0], edge[1])
+        #     path = [(nodes[i], nodes[i+1]) for i in range(len(nodes)-1)]
+        #     ret.extend(path)
+        return one_stroke_path
 
-    def get_curves_from_path(self, curves, path):
-        return [self.get_curve(curves, anchor) for anchor in path]
-
-    def get_curve(self, curves, anchor):
+    @staticmethod
+    def get_curve_from_anchor(curves, anchor):
         start = complex(anchor[0][0], anchor[0][1])
         end = complex(anchor[1][0], anchor[1][1])
         for curve in curves:
@@ -98,8 +104,8 @@ class Epicycle:
         py5.push()
         py5.translate(py5.width / 2, py5.height / 2)
         py5.translate(self.circle_center.real, self.circle_center.imag)
-        py5.stroke(0xffffffff)
         py5.no_fill()
+        py5.stroke(0xffffffff)
         for n in range(len(self.point_list)-1):
             p0 = self.point_list[n]
             p1 = self.point_list[n+1]
@@ -111,11 +117,10 @@ class Epicycle:
 
         f = 0.
         py5.stroke(0xff0000ff)
-        py5.no_fill()
         for n in range(deg):
             rad = self.init_rad * n
-            x = (self.plots_dft[0][n].real * math.cos(rad) + self.plots_dft[0][n].imag * math.sin(rad)) * 2. / self.max_smp
-            y = (self.plots_dft[1][n].real * math.cos(rad) + self.plots_dft[1][n].imag * math.sin(rad)) * 2. / self.max_smp
+            x = (self.plots_dft_x[n].real * math.cos(rad) + self.plots_dft_x[n].imag * math.sin(rad)) * 2. / self.max_smp
+            y = (self.plots_dft_y[n].real * math.cos(rad) + self.plots_dft_y[n].imag * math.sin(rad)) * 2. / self.max_smp
             if n == 0:
                 x *= 0.5
                 y *= 0.5
