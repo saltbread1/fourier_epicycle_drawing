@@ -1,6 +1,7 @@
 import py5
 import numpy as np
 import math
+import cmath
 import networkx as nx
 from ortoolpy import chinese_postman
 import outline
@@ -10,20 +11,21 @@ from curve import Line
 class Epicycle:
     def __init__(self):
         self.max_smp = 0.
-        self.plots_dft_x = np.array([])
-        self.plots_dft_y = np.array([])
+        self.plots_dft = [np.array([]), np.array([])]
         self.init_rad = 0.
         self.point_list = []
 
-    def initialize(self, filename, smp_interval):
+    def initialize(self, filename, smp_dist_interval):
         curves = outline.svg2curves(filename)
         path = self.calc_drawing_path(curves)
         curves = self.get_curves_from_path(curves, path)
-        plots = np.array([point for curve in curves for point in curve.get_points(smp_interval)])
+        plots = np.array([point for curve in curves for point in curve.get_points(smp_dist_interval)])
         self.max_smp = len(plots)
-        self.plots_dft_x = np.fft.fft([p.real for p in plots])
-        self.plots_dft_y = np.fft.fft([p.imag for p in plots])
+        print(self.max_smp)
+        self.plots_dft[0] = np.fft.fft([p.real for p in plots])
+        self.plots_dft[1] = np.fft.fft([p.imag for p in plots])
         self.init_rad = 0.
+        self.point_list = []
 
     def calc_drawing_path(self, curves):
         # create graph based on a curve set
@@ -104,18 +106,11 @@ class Epicycle:
         py5.no_fill()
         for i in range(n):
             rad = self.init_rad * i
-            x = self.plots_dft_x[i].real * math.cos(rad) + self.plots_dft_x[i].imag * math.sin(rad)
-            y = self.plots_dft_y[i].real * math.cos(rad) + self.plots_dft_y[i].imag * math.sin(rad)
-            #c =  / self.max_smp
-            if i == 0:
-                f += complex(x/2., 0) * 2 / self.max_smp
-            else:
-                f += complex(x, y) * 2 / self.max_smp
-            # f = complex(self.plots_dft_x[i].item(), self.plots_dft_y[i].item()) / len(self.plots_dft_x)
-            # r = abs(f)
-            # py5.ellipse(c.real, c.imag, 2. * r, 2. * r)
-            #
-            # c += f * complex(math.cos(rad), math.sin(rad))
+            x = self.plots_dft[0][i] * complex(math.cos(rad), math.sin(rad)) / self.max_smp * 2.
+            y = self.plots_dft[1][i] * complex(math.cos(rad), math.sin(rad)) / self.max_smp * 2.
+            r = math.sqrt(x.real * x.real + y.real * y.real)
+            py5.ellipse(f.real, f.imag, 2. * r, 2. * r)
+            f += complex(x.real, y.real)
 
         self.point_list.append(f)
         self.init_rad += dt
@@ -124,5 +119,3 @@ class Epicycle:
         py5.fill(0xffff0000)
         py5.ellipse(f.real, f.imag, 8, 8)
         py5.pop()
-
-    # def outline_function(self, t):

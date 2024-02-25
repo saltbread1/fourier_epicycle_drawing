@@ -13,14 +13,14 @@ def setup():
     py5.size(512, 512)
     py5.frame_rate(60)
     py5.background(0xff000000)
-    renderer.initialize('sample.svg', 0.1)
+    renderer.initialize('sample.svg', 0.5)
 
 
 def draw():
     py5.background(0xff000000)
     for i in range(4):
         py5.background(0xff000000)
-        renderer.update_and_draw(200, 0.002)
+        renderer.update_and_draw(400, 0.002)
 
 
 py5.run_sketch()
