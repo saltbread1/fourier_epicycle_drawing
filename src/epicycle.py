@@ -14,9 +14,16 @@ class Epicycle:
         self.plots_dft = [np.array([]), np.array([])]
         self.init_rad = 0.
         self.point_list = []
+        self.circle_center = 0
+        self.image_center = 0
+        self.curves = []
 
-    def initialize(self, filename, smp_dist_interval):
-        curves = outline.svg2curves(filename)
+    def initialize(self, filename, smp_dist_interval, circle_center=0, image_center=0):
+        self.circle_center = circle_center
+        self.image_center = image_center
+
+        curves = outline.svg2curves(filename, image_center - circle_center)
+        self.curves = curves
         path = self.calc_drawing_path(curves)
         curves = self.get_curves_from_path(curves, path)
         plots = np.array([point for curve in curves for point in curve.get_points(smp_dist_interval)])
@@ -87,14 +94,15 @@ class Epicycle:
                 other_point = other
         return min_dist, other_point
 
-    def update_and_draw(self, n, dt):
+    def update_and_draw(self, deg, dt):
         py5.push()
         py5.translate(py5.width / 2, py5.height / 2)
+        py5.translate(self.circle_center.real, self.circle_center.imag)
         py5.stroke(0xffffffff)
         py5.no_fill()
-        for i in range(len(self.point_list)-1):
-            p0 = self.point_list[i]
-            p1 = self.point_list[i+1]
+        for n in range(len(self.point_list)-1):
+            p0 = self.point_list[n]
+            p1 = self.point_list[n+1]
             py5.line(p0.real, p0.imag, p1.real, p1.imag)
 
         if self.init_rad >= math.tau:
@@ -104,13 +112,16 @@ class Epicycle:
         f = 0.
         py5.stroke(0xff0000ff)
         py5.no_fill()
-        for i in range(n):
-            rad = self.init_rad * i
-            x = self.plots_dft[0][i] * complex(math.cos(rad), math.sin(rad)) / self.max_smp * 2.
-            y = self.plots_dft[1][i] * complex(math.cos(rad), math.sin(rad)) / self.max_smp * 2.
-            r = math.sqrt(x.real * x.real + y.real * y.real)
+        for n in range(deg):
+            rad = self.init_rad * n
+            x = (self.plots_dft[0][n].real * math.cos(rad) + self.plots_dft[0][n].imag * math.sin(rad)) * 2. / self.max_smp
+            y = (self.plots_dft[1][n].real * math.cos(rad) + self.plots_dft[1][n].imag * math.sin(rad)) * 2. / self.max_smp
+            if n == 0:
+                x *= 0.5
+                y *= 0.5
+            r = math.sqrt(x*x+y*y)
             py5.ellipse(f.real, f.imag, 2. * r, 2. * r)
-            f += complex(x.real, y.real)
+            f += complex(x, y)
 
         self.point_list.append(f)
         self.init_rad += dt
