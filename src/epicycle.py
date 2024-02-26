@@ -1,9 +1,9 @@
 import py5
 import numpy as np
 import math
-import cmath
 import networkx as nx
 from ortoolpy import chinese_postman
+import codecs
 import outline
 from curve import Line
 
@@ -135,3 +135,17 @@ class Epicycle:
         py5.fill(0xffff0000)
         py5.ellipse(f.real, f.imag, 8, 8)
         py5.pop()
+
+    def get_fourier_series(self, deg, filename='fourier_series.txt'):
+        series_x = f'{self.plots_dft_x[0].real / self.max_smp:.3f}'
+        series_y = f'{self.plots_dft_y[0].real / self.max_smp:.3f}'
+        for n in range(1, deg):
+            rx = abs(self.plots_dft_x[n]) * 2. / self.max_smp
+            ry = abs(self.plots_dft_y[n]) * 2. / self.max_smp
+            phix = math.atan2(self.plots_dft_x[n].real, self.plots_dft_x[n].imag)
+            phiy = math.atan2(self.plots_dft_y[n].real, self.plots_dft_y[n].imag)
+            opx = '+' if phix > 0 else '-' if phix < 0 else ''
+            opy = '+' if phiy > 0 else '-' if phiy < 0 else ''
+            series_x += f' + {rx:.3f}sin({n}t{opx}{abs(phix):.3f})'
+            series_y += f' + {ry:.3f}sin({n}t{opy}{abs(phiy):.3f})'
+        print(f'x = {series_x}\ny = {series_y}', file=codecs.open(filename, 'w', 'utf-8'))
