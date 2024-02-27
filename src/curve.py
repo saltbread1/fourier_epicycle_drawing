@@ -107,17 +107,6 @@ class CubicBezier(Curve):
         return l
 
     def get_points(self, dl):
-        # bezier_points = np.array([self.get_bezier_point(t) for t in np.arange(0, 1, 0.01)])
-        # cache = 0.
-        # ret = [bezier_points[0]]
-        # for i in range(1, len(bezier_points)):
-        #     curr = bezier_points[i]
-        #     prev = bezier_points[i-1]
-        #     cache += abs(curr - prev)
-        #     if cache > dl:
-        #         ret.append(curr)
-        #         cache = 0.
-        # return np.array(ret)
         return np.array([self.get_bezier_point(t) for t in np.arange(0, 1, dl / self.get_length())])
 
     def get_bezier_point(self, t):

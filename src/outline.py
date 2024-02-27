@@ -4,21 +4,21 @@ import svg.path
 import curve
 
 
-def svg2curves(filename):
+def svg2curves(filename, center=0):
     filepath = os.path.join(os.path.dirname(__file__), '..', 'resources', 'images', filename)
     tree = ET.parse(filepath)
     root = tree.getroot()
 
     # get resolutions
     root_attr = root.attrib
-    width = int(root_attr['width'])
-    height = int(root_attr['height'])
+    width = float(root_attr['width'].replace('pt', ''))
+    height = float(root_attr['height'].replace('pt', ''))
 
     # get translate and scale
     translate = None
     scale = None
     svg_ns = {'svg': 'http://www.w3.org/2000/svg'}
-    g = root.find('svg:g', svg_ns)
+    g = root.find('.//svg:g', svg_ns)
     if g is not None:
         transform = g.get('transform')
         if transform is not None:
@@ -34,7 +34,7 @@ def svg2curves(filename):
                     scale = complex(x, y)
 
     # parse paths
-    paths = root.findall('svg:path', svg_ns)
+    paths = root.findall('.//svg:path', svg_ns)
     curves = []
     for path in paths:
         d = path.get('d')
@@ -61,6 +61,6 @@ def svg2curves(filename):
 
     # match the center of this image to the origin point
     for cv in curves:
-        cv.translate(complex(-width/2, -height/2))
+        cv.translate(complex(-width/2, -height/2) + center)
 
     return curves
