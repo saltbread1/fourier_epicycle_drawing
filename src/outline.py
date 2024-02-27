@@ -18,7 +18,7 @@ def svg2curves(filename, center=0):
     translate = None
     scale = None
     svg_ns = {'svg': 'http://www.w3.org/2000/svg'}
-    g = root.find('svg:g', svg_ns)
+    g = root.find('.//svg:g', svg_ns)
     if g is not None:
         transform = g.get('transform')
         if transform is not None:
@@ -34,7 +34,7 @@ def svg2curves(filename, center=0):
                     scale = complex(x, y)
 
     # parse paths
-    paths = root.findall('svg:path', svg_ns)
+    paths = root.findall('.//svg:path', svg_ns)
     curves = []
     for path in paths:
         d = path.get('d')

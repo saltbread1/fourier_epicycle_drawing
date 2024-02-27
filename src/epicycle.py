@@ -12,31 +12,35 @@ class Epicycle:
     def __init__(self):
         self.circle_center = 0
         self.image_center = 0
-        self.max_smp = 0.
+        self.smp_size = 0.
         self.plots_dft_x = np.array([])
         self.plots_dft_y = np.array([])
         self.init_rad = 0.
         self.point_list = []
 
-    def initialize(self, filename, smp_dist_interval, dup_path_dist_thresh, circle_center=0, image_center=0):
+    def initialize(self, filename, smp_dist_interval, circle_center=0, image_center=0):
         self.circle_center = circle_center
         self.image_center = image_center
 
         curves = outline.svg2curves(filename, image_center - circle_center)
-        path = self.calc_drawing_path(curves, dup_path_dist_thresh)
+        path = self.calc_drawing_path(curves)
         curves = [self.get_curve_from_anchor(curves, anchor) for anchor in path]
         plots = [point for curve in curves for point in curve.get_points(smp_dist_interval)]
-        self.max_smp = len(plots)
-        print(self.max_smp)
+        self.smp_size = len(plots)
+        print(f'sample size: {self.smp_size}')
         self.plots_dft_x = np.fft.fft([p.real for p in plots])
         self.plots_dft_y = np.fft.fft([p.imag for p in plots])
+
+        self.start_animation()
+
+    def start_animation(self):
         self.init_rad = 0.
         self.point_list = []
 
-    def calc_drawing_path(self, curves, dup_path_dist_thresh):
+    def calc_drawing_path(self, curves):
         # create graph based on a curve set
         # this is probably disconnected graph
-        g = nx.MultiGraph()
+        g = nx.Graph()
         for curve in curves:
             start = (curve.start.real, curve.start.imag)
             end = (curve.end.real, curve.end.imag)
@@ -62,10 +66,14 @@ class Epicycle:
             g.add_edge((min_points[0].real, min_points[0].imag),
                        (min_points[1].real, min_points[1].imag),
                        weight=min_dist)
+        print(f'the number of edges: {len(g.edges())}')
+
+        cache_g = nx.Graph(g)
 
         # solve Chinese Postman Problem
-        cache_g = nx.MultiGraph(g)
-        _, one_stroke_path = chinese_postman(g)
+        total_weight, one_stroke_path = chinese_postman(g)
+
+        # not to stray too far from the outline
         ret = []
         for edge in one_stroke_path:
             if edge[1] in nx.neighbors(cache_g, edge[0]):
@@ -73,7 +81,7 @@ class Epicycle:
                 continue
             nodes = nx.shortest_path(cache_g, edge[0], edge[1])
             path = [(nodes[i], nodes[i+1]) for i in range(len(nodes)-1)]
-            if sum(cache_g[u][v][0]['weight'] for (u, v) in path) < dup_path_dist_thresh:
+            if sum(cache_g[u][v]['weight'] for u, v in path) < total_weight * 0.02:
                 ret.extend(path)
             else:
                 ret.append(edge)
@@ -122,8 +130,8 @@ class Epicycle:
         py5.stroke(0xff0000ff)
         for n in range(deg):
             rad = self.init_rad * n
-            x = (self.plots_dft_x[n].real * math.cos(rad) + self.plots_dft_x[n].imag * math.sin(rad)) * 2. / self.max_smp
-            y = (self.plots_dft_y[n].real * math.cos(rad) + self.plots_dft_y[n].imag * math.sin(rad)) * 2. / self.max_smp
+            x = (self.plots_dft_x[n].real * math.cos(rad) + self.plots_dft_x[n].imag * math.sin(rad)) * 2. / self.smp_size
+            y = (self.plots_dft_y[n].real * math.cos(rad) + self.plots_dft_y[n].imag * math.sin(rad)) * 2. / self.smp_size
             if n == 0:
                 x *= 0.5
                 y *= 0.5
@@ -140,11 +148,11 @@ class Epicycle:
         py5.pop()
 
     def export_fourier_series(self, deg, filename='fourier_series.txt'):
-        series_x = f'{self.plots_dft_x[0].real / self.max_smp:.3f}'
-        series_y = f'{self.plots_dft_y[0].real / self.max_smp:.3f}'
+        series_x = f'{self.plots_dft_x[0].real / self.smp_size:.3f}'
+        series_y = f'{self.plots_dft_y[0].real / self.smp_size:.3f}'
         for n in range(1, deg):
-            rx = abs(self.plots_dft_x[n]) * 2. / self.max_smp
-            ry = abs(self.plots_dft_y[n]) * 2. / self.max_smp
+            rx = abs(self.plots_dft_x[n]) * 2. / self.smp_size
+            ry = abs(self.plots_dft_y[n]) * 2. / self.smp_size
             phix = math.atan2(self.plots_dft_x[n].real, self.plots_dft_x[n].imag)
             phiy = math.atan2(self.plots_dft_y[n].real, self.plots_dft_y[n].imag)
             opx = '+' if phix > 0 else '-' if phix < 0 else ''
