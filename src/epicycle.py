@@ -18,12 +18,12 @@ class Epicycle:
         self.init_rad = 0.
         self.point_list = []
 
-    def initialize(self, filename, smp_dist_interval, circle_center=0, image_center=0):
+    def initialize(self, filename, smp_dist_interval, dup_path_dist_thresh, circle_center=0, image_center=0):
         self.circle_center = circle_center
         self.image_center = image_center
 
         curves = outline.svg2curves(filename, image_center - circle_center)
-        path = self.calc_drawing_path(curves)
+        path = self.calc_drawing_path(curves, dup_path_dist_thresh)
         curves = [self.get_curve_from_anchor(curves, anchor) for anchor in path]
         plots = [point for curve in curves for point in curve.get_points(smp_dist_interval)]
         self.max_smp = len(plots)
@@ -33,7 +33,7 @@ class Epicycle:
         self.init_rad = 0.
         self.point_list = []
 
-    def calc_drawing_path(self, curves):
+    def calc_drawing_path(self, curves, dup_path_dist_thresh):
         # create graph based on a curve set
         # this is probably disconnected graph
         g = nx.MultiGraph()
@@ -66,15 +66,18 @@ class Epicycle:
         # solve Chinese Postman Problem
         cache_g = nx.MultiGraph(g)
         _, one_stroke_path = chinese_postman(g)
-        # ret = []
-        # for edge in one_stroke_path:
-        #     if edge[1] in nx.neighbors(cache_g, edge[0]):
-        #         ret.append(edge)
-        #         continue
-        #     nodes = nx.shortest_path(cache_g, edge[0], edge[1])
-        #     path = [(nodes[i], nodes[i+1]) for i in range(len(nodes)-1)]
-        #     ret.extend(path)
-        return one_stroke_path
+        ret = []
+        for edge in one_stroke_path:
+            if edge[1] in nx.neighbors(cache_g, edge[0]):
+                ret.append(edge)
+                continue
+            nodes = nx.shortest_path(cache_g, edge[0], edge[1])
+            path = [(nodes[i], nodes[i+1]) for i in range(len(nodes)-1)]
+            if sum(cache_g[u][v][0]['weight'] for (u, v) in path) < dup_path_dist_thresh:
+                ret.extend(path)
+            else:
+                ret.append(edge)
+        return ret
 
     @staticmethod
     def get_curve_from_anchor(curves, anchor):
