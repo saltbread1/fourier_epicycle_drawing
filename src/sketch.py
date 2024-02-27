@@ -14,7 +14,7 @@ def setup():
     py5.frame_rate(60)
     py5.background(0xff000000)
     renderer.initialize('sample.svg', 0.5, 128)
-    renderer.get_fourier_series(256)
+    renderer.export_fourier_series(256)
 
 
 def draw():

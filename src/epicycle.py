@@ -139,7 +139,7 @@ class Epicycle:
         py5.ellipse(f.real, f.imag, 8, 8)
         py5.pop()
 
-    def get_fourier_series(self, deg, filename='fourier_series.txt'):
+    def export_fourier_series(self, deg, filename='fourier_series.txt'):
         series_x = f'{self.plots_dft_x[0].real / self.max_smp:.3f}'
         series_y = f'{self.plots_dft_y[0].real / self.max_smp:.3f}'
         for n in range(1, deg):
